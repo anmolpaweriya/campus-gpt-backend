@@ -37,6 +37,7 @@ export class ChatService {
       })),
     ];
     try {
+<<<<<<< HEAD
       const course = await this.courseService.getUserCourse(userId);
       data.push({
         role: 'system',
@@ -50,6 +51,76 @@ export class ChatService {
     data.push({
       role: 'system',
       content: `these are my universities faculties : ${JSON.stringify(faculties)}`,
+=======
+      const response = await axios.post(
+        this.OPENROUTER_URL,
+        {
+          model: this.OPENROUTER_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an expert conversation title generator. Output ONLY a concise, professional 3 to 5 word title for a campus chat conversation based on the query. Do not write explanations. Do not use quotes or markdown. Just return the title.',
+            },
+            {
+              role: 'user',
+              content: `Generate a 3-5 word title for: "${userMessage}"`,
+            },
+          ],
+          temperature: 0.3,
+          max_tokens: 250,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 12000,
+        },
+      );
+
+      let title = response.data?.choices?.[0]?.message?.content?.trim();
+      if (title) {
+        title = title
+          .replace(/^Title:\s*/i, '')
+          .replace(/[*#`_"]/g, '')
+          .replace(/^["']|["']$/g, '')
+          .replace(/[.]$/, '')
+          .trim();
+        // Take the first line only
+        title = title.split('\n')[0].trim();
+        if (title.length > 0) {
+          return title.length > 30 ? title.slice(0, 30).trim() : title;
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        'Failed to generate AI title with OpenRouter, falling back to heuristic',
+        err?.message,
+      );
+    }
+
+    return this.fallbackExtractTitle(userMessage);
+  }
+
+  private fallbackExtractTitle(userMessage: string): string {
+    const cleaned = userMessage.trim().replace(/[?!.,]/g, '');
+    const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
+    const shortWords = words.slice(0, 4);
+    let title = shortWords
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+    if (title.length > 28) {
+      title = title.slice(0, 28).trim();
+    }
+    return title || 'New Chat';
+  }
+
+  async recommendRoomTitle(chatId: string) {
+    const firstUserMsg = await this.ChatMessageModel.findOne({
+      where: { chatId, role: 'user' },
+      order: [['createdAt', 'ASC']],
+>>>>>>> 0840c34 (refactor: update chat system prompt, optimize LLM limits, and enhance location context)
     });
 
     const subjects = await this.courseService.getSubjects();
@@ -100,9 +171,17 @@ export class ChatService {
       });
     }
 
+<<<<<<< HEAD
     const history = await this.ChatMessageModel.findAll({
       where: { chatId },
       order: [['createdAt', 'ASC']],
+=======
+    // Retrieve recent conversation history (capped at last 6 messages for low latency & token efficiency)
+    const history = await this.ChatMessageModel.findAll({
+      where: { chatId },
+      order: [['createdAt', 'DESC']],
+      limit: 6,
+>>>>>>> 0840c34 (refactor: update chat system prompt, optimize LLM limits, and enhance location context)
     });
     const trainingData = await this.getModelTrainingData(room.userId);
     // Convert DB history to OpenAI-compatible format
@@ -114,6 +193,7 @@ export class ChatService {
       })),
     ];
 
+<<<<<<< HEAD
     // Send to OpenRouter API
     const response = await axios.post(
       this.OPENROUTER_URL,
@@ -125,6 +205,17 @@ export class ChatService {
         headers: {
           Authorization: `Bearer ${this.OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json',
+=======
+    try {
+      // Send to OpenRouter API with timeout
+      const response = await axios.post(
+        this.OPENROUTER_URL,
+        {
+          model: this.OPENROUTER_MODEL,
+          messages: formattedMessages,
+          temperature: 0.2,
+          max_tokens: 900,
+>>>>>>> 0840c34 (refactor: update chat system prompt, optimize LLM limits, and enhance location context)
         },
       },
     );
